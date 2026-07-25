@@ -1,0 +1,209 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// 1. Get the lifespan days from the incoming webhook\nlet lifespanDays = $json.body.lifespan_days || 30; \n\n// 2. Calculate how many days to wait (Lifespan minus 5 days warning)\nlet daysToWait = lifespanDays - 5;\n\n// 3. Get today's date\nlet reminderDate = new Date();\n\n// 4. Add the daysToWait to today's date\nreminderDate.setDate(reminderDate.getDate() + daysToWait);\n\n// 5. Format the date to YYYY-MM-DD (which Shopify requires)\nlet formattedDate = reminderDate.toISOString().split('T')[0];\n\n// 6. Output the result so the next node can use it\nreturn {\n  json: {\n    customer_name: $json.body.customer_name,\n    customer_phone: $json.body.customer_phone,\n    reminder_date: formattedDate\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -272,
+        -160
+      ],
+      "id": "8f6785cc-b3d9-4de9-896d-7b0ab91b3c5f",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        -128
+      ],
+      "id": "47180451-59e3-402e-aba1-da1cf7abf332",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "rLdpQPEDyRvVcCSv",
+          "name": "Messaging.digital WhatsApp"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "accessToken",
+        "topic": "orders/create"
+      },
+      "type": "n8n-nodes-base.shopifyTrigger",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -352
+      ],
+      "id": "7d187491-399b-4fbc-87a8-cd169205d332",
+      "name": "Shopify Trigger",
+      "webhookId": "4c8f653c-b339-449b-87c0-2cf8d54dfada",
+      "credentials": {
+        "shopifyAccessTokenApi": {
+          "id": "0cCc4MzVLNseRQ18",
+          "name": "Shopify Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "accessToken",
+        "resource": "product",
+        "operation": "get",
+        "productId": "={{ $json.line_items[0].product_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.shopify",
+      "typeVersion": 1,
+      "position": [
+        112,
+        -480
+      ],
+      "id": "b563eea8-7eff-4df6-b763-66c33ececf3c",
+      "name": "Get a product",
+      "credentials": {
+        "shopifyAccessTokenApi": {
+          "id": "0cCc4MzVLNseRQ18",
+          "name": "Shopify Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://naturavest.myshopify.com/admin/api/2026-01/products/{{ $('Shopify Trigger').item.json.line_items[0].product_id }}/metafields.json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "shopifyAccessTokenApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        272,
+        -352
+      ],
+      "id": "b312f8b5-e252-4c7d-96a1-6330263b5a21",
+      "name": "HTTP Request1",
+      "credentials": {
+        "shopifyAccessTokenApi": {
+          "id": "0cCc4MzVLNseRQ18",
+          "name": "Shopify Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get the metafields array from the HTTP Request node\nlet metafields = $json.metafields || [];\nlet lifespanDays = null;\n\n// 2. Search the array for our custom.lifespan_days key\nfor (let i = 0; i < metafields.length; i++) {\n  if (metafields[i].namespace === 'custom' && metafields[i].key === 'lifespan_days') {\n    lifespanDays = parseInt(metafields[i].value);\n    break;\n  }\n}\n\n// 3. If we didn't find it, default to 30 days so the workflow doesn't crash\nif (!lifespanDays) lifespanDays = 30;\n\n// 4. Calculate the days to wait (Lifespan minus 5 days warning)\nlet daysToWait = lifespanDays - 5;\n\n// 5. Get today's date and add the days to wait\nlet reminderDate = new Date();\nreminderDate.setDate(reminderDate.getDate() + daysToWait);\n\n// 6. Format the date to YYYY-MM-DD (which Shopify requires)\nlet formattedDate = reminderDate.toISOString().split('T')[0];\n\n// 7. Get the Order ID from the Shopify Trigger node so we know where to save this\nlet orderId = $('Shopify Trigger').item.json.id;\n\n// 8. Output the result\nreturn {\n  json: {\n    order_id: orderId,\n    reminder_date: formattedDate\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        -480
+      ],
+      "id": "72c6686e-3bce-4301-ba31-3b4eff7c37a1",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://naturavest.myshopify.com/admin/api/2026-01/orders/{{ $json.order_id }}/metafields.json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "shopifyAccessTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"metafield\": {\n    \"namespace\": \"custom\",\n    \"key\": \"reminder_date\",\n    \"value\": \"{{ $json.reminder_date }}\",\n    \"type\": \"date\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        576,
+        -352
+      ],
+      "id": "bd6111e7-7c9c-4996-8511-696d50e20068",
+      "name": "HTTP Request2",
+      "credentials": {
+        "shopifyAccessTokenApi": {
+          "id": "0cCc4MzVLNseRQ18",
+          "name": "Shopify Access Token account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code in JavaScript": {
+      "main": [
+        []
+      ]
+    },
+    "Shopify Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a product",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a product": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "829b11ca-d209-4d1b-af41-cb7acbe88519",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "814da45ea58d879c68f6e4806ec54c5df6970a15302a0f4edf2ad38068501caa"
+  },
+  "id": "iuNxB6G1C0FHvfGx",
+  "tags": []
+}
