@@ -1,0 +1,174 @@
+{
+  "name": "Naturavest - Product End Reminder - Part B (Send WhatsApp & Tag Order)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1040,
+        16
+      ],
+      "id": "885162b0-b667-4d22-8fc1-d95862568761",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://naturavest.myshopify.com/admin/api/2024-04/graphql.json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "shopifyOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"query($q: String!) { orders(first: 50, query: $q) { edges { node { id phone customer { firstName phone } lineItems(first: 1) { edges { node { name } } } } } } }\",\n  \"variables\": { \"q\": \"tag:reminder_{{ $today.toISODate() }}\" }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -848,
+        16
+      ],
+      "id": "26c042c9-44b9-42f6-bbd2-bf71ba55be32",
+      "name": "Get Todays Orders",
+      "credentials": {
+        "shopifyOAuth2Api": {
+          "id": "Cu9Bss8AZHjL4kHJ",
+          "name": "Shopify main"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data.orders.edges",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        16
+      ],
+      "id": "0c6cfec0-16d2-4927-8791-3b27b064b4f8",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://messagingapi.charteredinfo.com/v19.0/1170495406139086/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ ($json.node.phone || $json.node.customer?.phone || '').replace(/\\\\D/g, '') }}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"purchase_reminder\",\n    \"language\": { \"code\": \"en\" },\n    \"components\": [\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          { \"type\": \"text\", \"text\": \"{{ $json.node.customer?.firstName || 'there' }}\" },\n          { \"type\": \"text\", \"text\": \"{{ $json.node.lineItems.edges[0]?.node.name || 'your product' }}\" }\n        ]\n      }\n    ]\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -448,
+        16
+      ],
+      "id": "7bf8c829-dddd-43ae-a07c-050daf967df5",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "rLdpQPEDyRvVcCSv",
+          "name": "Messaging.digital WhatsApp"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://naturavest.myshopify.com/admin/api/2024-04/graphql.json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "shopifyOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"mutation tagsRemove($id: ID!, $tags: [String!]!) { tagsRemove(id: $id, tags: $tags) { node { id } userErrors { field message } } }\",\n  \"variables\": {\n    \"id\": \"{{ $('Split Out').item.json.node.id }}\",\n    \"tags\": [\"reminder_{{ $today.toISODate() }}\"]\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -240,
+        16
+      ],
+      "id": "6b7239ba-d635-4007-9af3-b8e178de4361",
+      "name": "HTTP Request1",
+      "credentials": {
+        "shopifyOAuth2Api": {
+          "id": "Cu9Bss8AZHjL4kHJ",
+          "name": "Shopify main"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Todays Orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Todays Orders": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "33c2a906-9a37-4152-9402-8db30a2b61e9",
+  "meta": {
+    "instanceId": "814da45ea58d879c68f6e4806ec54c5df6970a15302a0f4edf2ad38068501caa"
+  },
+  "id": "RQmfYqRlSK7HRvcK",
+  "tags": []
+}
