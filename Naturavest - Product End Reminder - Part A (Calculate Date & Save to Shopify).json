@@ -1,82 +1,24 @@
 {
-  "name": "My workflow",
+  "name": "Naturavest - Product End Reminder - Part A (Calculate Date & Save to Shopify)",
   "nodes": [
     {
       "parameters": {
-        "jsCode": "// 1. Get the lifespan days from the incoming webhook\nlet lifespanDays = $json.body.lifespan_days || 30; \n\n// 2. Calculate how many days to wait (Lifespan minus 5 days warning)\nlet daysToWait = lifespanDays - 5;\n\n// 3. Get today's date\nlet reminderDate = new Date();\n\n// 4. Add the daysToWait to today's date\nreminderDate.setDate(reminderDate.getDate() + daysToWait);\n\n// 5. Format the date to YYYY-MM-DD (which Shopify requires)\nlet formattedDate = reminderDate.toISOString().split('T')[0];\n\n// 6. Output the result so the next node can use it\nreturn {\n  json: {\n    customer_name: $json.body.customer_name,\n    customer_phone: $json.body.customer_phone,\n    reminder_date: formattedDate\n  }\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -272,
-        -160
-      ],
-      "id": "8f6785cc-b3d9-4de9-896d-7b0ab91b3c5f",
-      "name": "Code in JavaScript"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        0,
-        -128
-      ],
-      "id": "47180451-59e3-402e-aba1-da1cf7abf332",
-      "name": "HTTP Request",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "rLdpQPEDyRvVcCSv",
-          "name": "Messaging.digital WhatsApp"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "authentication": "accessToken",
+        "authentication": "oAuth2",
         "topic": "orders/create"
       },
       "type": "n8n-nodes-base.shopifyTrigger",
       "typeVersion": 1,
       "position": [
-        -48,
-        -352
+        -416,
+        -8080
       ],
       "id": "7d187491-399b-4fbc-87a8-cd169205d332",
       "name": "Shopify Trigger",
       "webhookId": "4c8f653c-b339-449b-87c0-2cf8d54dfada",
       "credentials": {
-        "shopifyAccessTokenApi": {
-          "id": "0cCc4MzVLNseRQ18",
-          "name": "Shopify Access Token account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "authentication": "accessToken",
-        "resource": "product",
-        "operation": "get",
-        "productId": "={{ $json.line_items[0].product_id }}",
-        "additionalFields": {}
-      },
-      "type": "n8n-nodes-base.shopify",
-      "typeVersion": 1,
-      "position": [
-        112,
-        -480
-      ],
-      "id": "b563eea8-7eff-4df6-b763-66c33ececf3c",
-      "name": "Get a product",
-      "credentials": {
-        "shopifyAccessTokenApi": {
-          "id": "0cCc4MzVLNseRQ18",
-          "name": "Shopify Access Token account"
+        "shopifyOAuth2Api": {
+          "id": "Cu9Bss8AZHjL4kHJ",
+          "name": "Shopify main"
         }
       }
     },
@@ -84,14 +26,14 @@
       "parameters": {
         "url": "=https://naturavest.myshopify.com/admin/api/2026-01/products/{{ $('Shopify Trigger').item.json.line_items[0].product_id }}/metafields.json",
         "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "shopifyAccessTokenApi",
+        "nodeCredentialType": "shopifyOAuth2Api",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        272,
-        -352
+        -144,
+        -8224
       ],
       "id": "b312f8b5-e252-4c7d-96a1-6330263b5a21",
       "name": "HTTP Request1",
@@ -99,6 +41,10 @@
         "shopifyAccessTokenApi": {
           "id": "0cCc4MzVLNseRQ18",
           "name": "Shopify Access Token account"
+        },
+        "shopifyOAuth2Api": {
+          "id": "Cu9Bss8AZHjL4kHJ",
+          "name": "Shopify main"
         }
       }
     },
@@ -109,8 +55,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        416,
-        -480
+        32,
+        -8096
       ],
       "id": "72c6686e-3bce-4301-ba31-3b4eff7c37a1",
       "name": "Code in JavaScript1"
@@ -120,7 +66,7 @@
         "method": "POST",
         "url": "=https://naturavest.myshopify.com/admin/api/2026-01/orders/{{ $json.order_id }}/metafields.json",
         "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "shopifyAccessTokenApi",
+        "nodeCredentialType": "shopifyOAuth2Api",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"metafield\": {\n    \"namespace\": \"custom\",\n    \"key\": \"reminder_date\",\n    \"value\": \"{{ $json.reminder_date }}\",\n    \"type\": \"date\"\n  }\n}",
@@ -129,8 +75,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        576,
-        -352
+        192,
+        -8224
       ],
       "id": "bd6111e7-7c9c-4996-8511-696d50e20068",
       "name": "HTTP Request2",
@@ -138,39 +84,46 @@
         "shopifyAccessTokenApi": {
           "id": "0cCc4MzVLNseRQ18",
           "name": "Shopify Access Token account"
+        },
+        "shopifyOAuth2Api": {
+          "id": "Cu9Bss8AZHjL4kHJ",
+          "name": "Shopify main"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://naturavest.myshopify.com/admin/api/2026-01/graphql.json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "shopifyOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"mutation tagsAdd($id: ID!, $tags: [String!]!) { tagsAdd(id: $id, tags: $tags) { node { id } userErrors { field message } } }\",\n  \"variables\": {\n    \"id\": \"gid://shopify/Order/{{ $json.order_id }}\",\n    \"tags\": [\"reminder_{{ $json.reminder_date }}\"]\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        368,
+        -8096
+      ],
+      "id": "12d967ac-3e20-436b-afb5-ef56c04adbb8",
+      "name": "HTTP Request3",
+      "credentials": {
+        "shopifyAccessTokenApi": {
+          "id": "0cCc4MzVLNseRQ18",
+          "name": "Shopify Access Token account"
+        },
+        "shopifyOAuth2Api": {
+          "id": "Cu9Bss8AZHjL4kHJ",
+          "name": "Shopify main"
         }
       }
     }
   ],
   "pinData": {},
   "connections": {
-    "Code in JavaScript": {
-      "main": [
-        []
-      ]
-    },
-    "Shopify Trigger": {
-      "main": [
-        [
-          {
-            "node": "Get a product",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get a product": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "HTTP Request1": {
       "main": [
         [
@@ -192,16 +145,41 @@
           }
         ]
       ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shopify Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
+    "binaryMode": "separate",
+    "availableInMCP": true
   },
-  "versionId": "829b11ca-d209-4d1b-af41-cb7acbe88519",
+  "versionId": "e6c1c574-3fb1-4d15-ab0c-ea1499904b7a",
   "meta": {
     "templateCredsSetupCompleted": true,
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
     "instanceId": "814da45ea58d879c68f6e4806ec54c5df6970a15302a0f4edf2ad38068501caa"
   },
   "id": "iuNxB6G1C0FHvfGx",
