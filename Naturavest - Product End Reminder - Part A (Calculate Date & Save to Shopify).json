@@ -32,8 +32,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -144,
-        -8224
+        -240,
+        -8288
       ],
       "id": "b312f8b5-e252-4c7d-96a1-6330263b5a21",
       "name": "HTTP Request1",
@@ -55,8 +55,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        32,
-        -8096
+        -32,
+        -8112
       ],
       "id": "72c6686e-3bce-4301-ba31-3b4eff7c37a1",
       "name": "Code in JavaScript1"
@@ -75,8 +75,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        192,
-        -8224
+        144,
+        -8304
       ],
       "id": "bd6111e7-7c9c-4996-8511-696d50e20068",
       "name": "HTTP Request2",
@@ -99,7 +99,7 @@
         "nodeCredentialType": "shopifyOAuth2Api",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"query\": \"mutation tagsAdd($id: ID!, $tags: [String!]!) { tagsAdd(id: $id, tags: $tags) { node { id } userErrors { field message } } }\",\n  \"variables\": {\n    \"id\": \"gid://shopify/Order/{{ $json.order_id }}\",\n    \"tags\": [\"reminder_{{ $json.reminder_date }}\"]\n  }\n}\n",
+        "jsonBody": "={\n  \"query\": \"mutation tagsAdd($id: ID!, $tags: [String!]!) { tagsAdd(id: $id, tags: $tags) { node { id } userErrors { field message } } }\",\n  \"variables\": {\n    \"id\": \"gid://shopify/Order/{{ $('Code in JavaScript1').item.json.order_id }}\",\n    \"tags\": [\"reminder_{{ $('Code in JavaScript1').item.json.reminder_date }}\"]\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -175,7 +175,7 @@
     "binaryMode": "separate",
     "availableInMCP": true
   },
-  "versionId": "e6c1c574-3fb1-4d15-ab0c-ea1499904b7a",
+  "versionId": "865e3c95-f69a-462b-b2b2-b14197ef287a",
   "meta": {
     "templateCredsSetupCompleted": true,
     "aiBuilderAssisted": true,
