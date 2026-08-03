@@ -94,12 +94,3 @@ Although this n8n system uses deterministic logic nodes, if LLMs/AI features are
 * **Prompt Caching & Latency:** If using an LLM to generate custom message copy, construct prompts with a static system prompt and dynamic variables at the end. This allows engines (like Gemini or Claude) to cache the system prompt, reducing latency and input token costs.
 * **Tool Calling Errors:** Any AI-agent workflow interacting with Shopify must implement schema-based tool validation to prevent LLMs from passing invalid arguments to mutations.
 
----
-
-## 5. Individual AI Agent Contributions (Antigravity)
-
-During the construction and maintenance of this codebase, my contributions include:
-1. **Repository Auditing:** Researched the workflow JSON structures, identified configuration dependencies (Shopify REST/GraphQL API versions, WhatsApp webhook IDs).
-2. **Code Robustness Improvements:** Analyzed date calculation algorithms and verified formatting logic in JavaScript blocks to prevent runtime crashes.
-3. **Operational Documentation:** Authored structural and operational guides, including sequence and data flow charts (Mermaid) to facilitate future handoffs.
-4. **Deployment & Git Sync:** Staged, committed, and managed codebase synchronization with GitHub.
