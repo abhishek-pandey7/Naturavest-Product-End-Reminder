@@ -18,7 +18,7 @@ graph TD
         B -->|4. Save Metafield custom.reminder_date_1| D[(Shopify Order Metafields)]
         B -->|5. Save Metafield custom.reminder_date_2| D[(Shopify Order Metafields)]
         B -->|6. Tag Order reminder1_YYYY-MM-DD & reminder2_YYYY-MM-DD| E[(Shopify Order Tags)]
-        H[(Shopify Order Tags)] -.-->|9. Remove Tags| G
+        H[(Shopify Order Tags)] -.->|9. Remove Tags| G
     end
 
     subgraph n8n Workflows
