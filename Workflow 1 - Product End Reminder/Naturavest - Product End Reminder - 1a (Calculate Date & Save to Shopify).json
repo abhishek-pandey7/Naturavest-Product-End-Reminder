@@ -8,10 +8,7 @@
       },
       "type": "n8n-nodes-base.shopifyTrigger",
       "typeVersion": 1,
-      "position": [
-        -416,
-        -8080
-      ],
+      "position": [-464, -8272],
       "id": "7d187491-399b-4fbc-87a8-cd169205d332",
       "name": "Shopify Trigger",
       "webhookId": "4c8f653c-b339-449b-87c0-2cf8d54dfada",
@@ -31,10 +28,7 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [
-        -240,
-        -8288
-      ],
+      "position": [-272, -8272],
       "id": "b312f8b5-e252-4c7d-96a1-6330263b5a21",
       "name": "HTTP Request1",
       "credentials": {
@@ -50,14 +44,11 @@
     },
     {
       "parameters": {
-        "jsCode": "// 1. Get the metafields array from the HTTP Request node\nlet metafields = $json.metafields || [];\nlet lifespanDays = null;\n\n// 2. Search the array for our custom.lifespan_days key\nfor (let i = 0; i < metafields.length; i++) {\n  if (metafields[i].namespace === 'custom' && metafields[i].key === 'lifespan_days') {\n    lifespanDays = parseInt(metafields[i].value);\n    break;\n  }\n}\n\n// 3. If we didn't find it, default to 30 days so the workflow doesn't crash\nif (!lifespanDays) lifespanDays = 30;\n\n// 4. Calculate the days to wait (Lifespan minus 5 days warning)\nlet daysToWait = lifespanDays - 5;\n\n// 5. Get today's date and add the days to wait\nlet reminderDate = new Date();\nreminderDate.setDate(reminderDate.getDate() + daysToWait);\n\n// 6. Format the date to YYYY-MM-DD (which Shopify requires)\nlet formattedDate = reminderDate.toISOString().split('T')[0];\n\n// 7. Get the Order ID from the Shopify Trigger node so we know where to save this\nlet orderId = $('Shopify Trigger').item.json.id;\n\n// 8. Output the result\nreturn {\n  json: {\n    order_id: orderId,\n    reminder_date: formattedDate\n  }\n};"
+        "jsCode": "// 1. Get base lifespan days from product metafields\nlet metafields = $json.metafields || [];\nlet baseLifespan = 30; // Default fallback\n\nfor (let i = 0; i < metafields.length; i++) {\n  if (metafields[i].namespace === 'custom' && metafields[i].key === 'lifespan_days') {\n    baseLifespan = parseInt(metafields[i].value);\n    break;\n  }\n}\n\n// 2. Get Quantity and Variant Name from Shopify Trigger\nlet triggerData = $('Shopify Trigger').item.json;\nlet quantity = triggerData.line_items[0].quantity || 1;\nlet variantName = triggerData.line_items[0].variant_title || '';\n\n// 3. Extract Pack Multiplier from Variant Name\nlet packMultiplier = 1;\nlet packMatch = variantName.match(/Pack of (\\d+)/i);\nif (packMatch) {\n  packMultiplier = parseInt(packMatch[1]);\n}\n\n// 4. Calculate Total Lifespan\nlet totalLifespan = baseLifespan * quantity * packMultiplier;\n\n// 5. Calculate Date 1 (Pre-runout: Total - 2 days)\nlet date1 = new Date();\ndate1.setDate(date1.getDate() + (totalLifespan - 2));\nlet reminder1 = date1.toISOString().split('T')[0];\n\n// 6. Calculate Date 2 (Post-runout: Total + 2 days)\nlet date2 = new Date();\ndate2.setDate(date2.getDate() + (totalLifespan + 2));\nlet reminder2 = date2.toISOString().split('T')[0];\n\n// 7. Output both dates and the order ID\nreturn {\n  json: {\n    order_id: triggerData.id,\n    reminder_date_1: reminder1,\n    reminder_date_2: reminder2\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -32,
-        -8112
-      ],
+      "position": [-64, -8272],
       "id": "72c6686e-3bce-4301-ba31-3b4eff7c37a1",
       "name": "Code in JavaScript1"
     },
@@ -69,15 +60,12 @@
         "nodeCredentialType": "shopifyOAuth2Api",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"metafield\": {\n    \"namespace\": \"custom\",\n    \"key\": \"reminder_date\",\n    \"value\": \"{{ $json.reminder_date }}\",\n    \"type\": \"date\"\n  }\n}",
+        "jsonBody": "={\n  \"metafield\": {\n    \"namespace\": \"custom\",\n    \"key\": \"reminder_date_1\",\n    \"value\": \"{{ $json.reminder_date_1 }}\",\n    \"type\": \"date\"\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [
-        144,
-        -8304
-      ],
+      "position": [144, -8272],
       "id": "bd6111e7-7c9c-4996-8511-696d50e20068",
       "name": "HTTP Request2",
       "credentials": {
@@ -99,15 +87,12 @@
         "nodeCredentialType": "shopifyOAuth2Api",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"query\": \"mutation tagsAdd($id: ID!, $tags: [String!]!) { tagsAdd(id: $id, tags: $tags) { node { id } userErrors { field message } } }\",\n  \"variables\": {\n    \"id\": \"gid://shopify/Order/{{ $('Code in JavaScript1').item.json.order_id }}\",\n    \"tags\": [\"reminder_{{ $('Code in JavaScript1').item.json.reminder_date }}\"]\n  }\n}",
+        "jsonBody": "={\n  \"query\": \"mutation tagsAdd($id: ID!, $tags: [String!]!) { tagsAdd(id: $id, tags: $tags) { node { id } userErrors { field message } } }\",\n  \"variables\": {\n    \"id\": \"gid://shopify/Order/{{ $('Code in JavaScript1').item.json.order_id }}\",\n    \"tags\": [\n      \"reminder1_{{ $('Code in JavaScript1').item.json.reminder_date_1 }}\",\n      \"reminder2_{{ $('Code in JavaScript1').item.json.reminder_date_2 }}\"\n    ]\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [
-        368,
-        -8096
-      ],
+      "position": [352, -8272],
       "id": "12d967ac-3e20-436b-afb5-ef56c04adbb8",
       "name": "HTTP Request3",
       "credentials": {
@@ -115,6 +100,29 @@
           "id": "0cCc4MzVLNseRQ18",
           "name": "Shopify Access Token account"
         },
+        "shopifyOAuth2Api": {
+          "id": "Cu9Bss8AZHjL4kHJ",
+          "name": "Shopify main"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://naturavest.myshopify.com/admin/api/2026-01/orders/{{ $json.order_id }}/metafields.json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "shopifyOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"metafield\": {\n    \"namespace\": \"custom\",\n    \"key\": \"reminder_date_2\",\n    \"value\": \"{{ $json.reminder_date_2 }}\",\n    \"type\": \"date\"\n  }\n}",
+        "options": {}
+      },
+      "id": "6d08ea58-9009-4b24-bd1a-93fe14df6a04",
+      "name": "HTTP Request2 - Date 2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [144, -8128],
+      "credentials": {
         "shopifyOAuth2Api": {
           "id": "Cu9Bss8AZHjL4kHJ",
           "name": "Shopify main"
@@ -142,6 +150,11 @@
             "node": "HTTP Request2",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "HTTP Request2 - Date 2",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -167,6 +180,17 @@
           }
         ]
       ]
+    },
+    "HTTP Request2 - Date 2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -175,7 +199,7 @@
     "binaryMode": "separate",
     "availableInMCP": true
   },
-  "versionId": "865e3c95-f69a-462b-b2b2-b14197ef287a",
+  "versionId": "ab4fe5a7-5fa0-4882-82af-147e614856fc",
   "meta": {
     "templateCredsSetupCompleted": true,
     "aiBuilderAssisted": true,
