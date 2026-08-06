@@ -11,30 +11,47 @@ The system is decoupled into two asynchronous phases:
 2. **Phase B (Daily Dispatch & Cleanup):** A cron-scheduled worker that query-filters orders due for either of the two reminders today, routes them to send the appropriate WhatsApp template, and clears the pending reminder tags.
 
 ```mermaid
-graph TD
-    subgraph Shopify Ecosystem
-        A[Customer Order Created] -->|1. Webhook: orders/create| B(n8n Part A: Intake)
-        B -->|2. Get Product Metafields| C[(Shopify Product Metafields)]
-        B -->|4. Save Metafield custom.reminder_date_1| D[(Shopify Order Metafields)]
-        B -->|5. Save Metafield custom.reminder_date_2| D[(Shopify Order Metafields)]
-        B -->|6. Tag Order reminder1_YYYY-MM-DD & reminder2_YYYY-MM-DD| E[(Shopify Order Tags)]
-        H[(Shopify Order Tags)] -.->|9. Remove Tags| G
+graph TB
+    subgraph Shopify [Shopify Ecosystem]
+        A[Customer Order Created]
+        C[(Product Metafields)]
+        D[(Order Metafields)]
+        E[(Order Tags)]
     end
 
-    subgraph n8n Workflows
-        B -->|3. Calculate dates based on quantity & packs| B
-        F[Daily Schedule Trigger - 8:00 AM] --> G(n8n Part B: Dispatcher)
-        G -->|7. GraphQL Query: orders with reminder1_today or reminder2_today| H[(Shopify Order Tags)]
-        G -->|8. Route and Send WhatsApp Template| I[Messaging.digital WhatsApp API]
+    subgraph n8n [n8n Automation]
+        B(Part A: Intake Webhook)
+        F[Part B: Daily Schedule Trigger]
+        G(Part B: Dispatcher Node)
     end
 
-    subgraph Messaging Gateway
-        I -->|10. WhatsApp Message| J[Customer Phone]
+    subgraph External [External Messaging]
+        I[Messaging.digital WhatsApp API]
+        J[Customer Phone]
     end
 
-    style A fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
-    style F fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-    style J fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    %% Flow links
+    A -->|1. orders/create| B
+    B -->|2. Get lifespan| C
+    B -->|3. Save reminder_date_1/2| D
+    B -->|4. Tag reminder1/2_YYYY-MM-DD| E
+
+    F --> G
+    E -.->|5. Get orders due today| G
+    G -->|6. Route & Send WhatsApp| I
+    I -->|7. Deliver message| J
+    G -.->|8. Remove processed tags| E
+
+    %% Color styling for dark & light theme readability
+    style A fill:#1565c0,stroke:#0d47a1,stroke-width:2px,color:#ffffff
+    style F fill:#2e7d32,stroke:#1b5e20,stroke-width:2px,color:#ffffff
+    style J fill:#4a148c,stroke:#311b92,stroke-width:2px,color:#ffffff
+    style B fill:#333333,stroke:#222222,stroke-width:2px,color:#ffffff
+    style G fill:#333333,stroke:#222222,stroke-width:2px,color:#ffffff
+    style C fill:#424242,stroke:#303030,stroke-width:2px,color:#ffffff
+    style D fill:#424242,stroke:#303030,stroke-width:2px,color:#ffffff
+    style E fill:#424242,stroke:#303030,stroke-width:2px,color:#ffffff
+    style I fill:#263238,stroke:#1a237e,stroke-width:2px,color:#ffffff
 ```
 
 ---
