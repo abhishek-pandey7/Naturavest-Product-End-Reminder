@@ -11,36 +11,34 @@ The system is decoupled into two asynchronous phases:
 2. **Phase B (Daily Dispatch & Cleanup):** A cron-scheduled worker that query-filters orders due for either of the two reminders today, routes them to send the appropriate WhatsApp template, and clears the pending reminder tags.
 
 ```mermaid
-graph TB
-    subgraph Shopify [Shopify Ecosystem]
+graph LR
+    subgraph Part A [Part A: Order Intake & Scheduling]
         A[Customer Order Created]
-        C[(Product Metafields)]
-        D[(Order Metafields)]
-        E[(Order Tags)]
+        B(Intake Webhook)
+        C[(Shopify Product Metafields)]
+        D[(Shopify Order Metafields)]
+        E[(Shopify Order Tags)]
+
+        A -->|1. Webhook| B
+        B -->|2. Get Lifespan| C
+        B -->|3. Save Dates| D
+        B -->|4. Add Tags| E
     end
 
-    subgraph n8n [n8n Automation]
-        B(Part A: Intake Webhook)
-        F[Part B: Daily Schedule Trigger]
-        G(Part B: Dispatcher Node)
-    end
-
-    subgraph External [External Messaging]
+    subgraph Part B [Part B: Daily Dispatch & Cleanup]
+        F[Daily Schedule Trigger - 8:00 AM]
+        G(Dispatcher Node)
         I[Messaging.digital WhatsApp API]
         J[Customer Phone]
+
+        F -->|5. Schedule Trigger| G
+        G -->|7. Send WhatsApp| I
+        I -->|8. Deliver Message| J
     end
 
-    %% Flow links
-    A -->|1. orders/create| B
-    B -->|2. Get lifespan| C
-    B -->|3. Save reminder_date_1/2| D
-    B -->|4. Tag reminder1/2_YYYY-MM-DD| E
-
-    F --> G
-    E -.->|5. Get orders due today| G
-    G -->|6. Route & Send WhatsApp| I
-    I -->|7. Deliver message| J
-    G -.->|8. Remove processed tags| E
+    %% Cross-workflow State Connection
+    E -.->|6. Read Tags| G
+    G -.->|9. Remove Tags| E
 
     %% Color styling for dark & light theme readability
     style A fill:#1565c0,stroke:#0d47a1,stroke-width:2px,color:#ffffff
