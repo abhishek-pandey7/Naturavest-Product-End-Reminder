@@ -112,13 +112,11 @@ sequenceDiagram
     Shopify-->>n8n: List of Orders (customer, tags, line items, product handle/image)
     Note over n8n: Split Out (Process item-by-item)
     loop For Each Staged Order
-        rect rgb(240, 248, 255)
-            Note over n8n: Switch: Route by Reminder Tag
-            alt Tag contains reminder1_today (Pre-Runout)
-                n8n->>WA: Send 'purchase_reminder' template (text only)
-            else Tag contains reminder2_today (Post-Runout)
-                n8n->>WA: Send 'restock_reminder_post' template (image + product handle)
-            end
+        Note over n8n: Switch: Route by Reminder Tag
+        alt Tag contains reminder1_today (Pre-Runout)
+            n8n->>WA: Send 'purchase_reminder' template (text only)
+        else Tag contains reminder2_today (Post-Runout)
+            n8n->>WA: Send 'restock_reminder_post' template (image + product handle)
         end
         WA-->>n8n: Send Confirmation
         n8n->>Shopify: POST /graphql.json (Mutation: remove reminder1_today & reminder2_today tags)
